@@ -12,4 +12,5 @@
 
                                                                  [ ] Multithreading: Implement a thread pool to divide the grid into chunks and calculate the neighbor rules in parallel.
 
+this step should be super easy 
                                                                  [ ] The GPU Port (OpenGL): Finish reading the OpenGL book and port the entire simulation to the graphics card (this is where you will use that Double Buffering swap-chain we talked about!).<
