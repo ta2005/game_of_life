@@ -21,7 +21,7 @@ int main(int argc,char **argv) {
     }
     std::ios::sync_with_stdio(false);
     std::cin.tie(0);
-    auto g = GameMap(h, w,repeat,{5,5});
+    auto g = GameMap(h, w,glider_gun,{5,5});
 
     g.play();
     return 0;
