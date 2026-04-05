@@ -1,4 +1,5 @@
 #include "../include/GameMap.hpp"
+#include "../include/Input.hpp"
 #include <fcntl.h>
 #include <termios.h>
 #include <unistd.h>
@@ -19,20 +20,12 @@ GameMap::GameMap(int h, int w, std::vector<std::pair<int, int>> &cor,
 	}
     }
 
-// will change this one to a std::optionl
-char read_key() {
-    char c;
-    if (read(STDIN_FILENO, &c, 1) == 1) {
-	return c;
-    }
-    return '\0';
-}
-
 // We need to store the original state globally so we can put it back later!
 struct termios orig_term;
 int orig_fcntl;
 
 void restore_terminal() {
+    std::cout<<"\033[?25h"<<std::flush;
     tcsetattr(STDIN_FILENO, TCSANOW, &orig_term);
     fcntl(STDIN_FILENO, F_SETFL, orig_fcntl);
 }
@@ -40,6 +33,7 @@ void restore_terminal() {
 void init_terminal() {
     // 1. Save the original terminal settings
     tcgetattr(STDIN_FILENO, &orig_term);
+    std::cout<<"\033[?25l"<<std::flush;
 
     // 2. Disable canonical mode and echo (what you already wrote)
     struct termios term = orig_term;
@@ -56,14 +50,6 @@ void init_terminal() {
 
 
 void GameMap::modify_map() {
-    // constexpr char KEY_UP = 65;    // code of 'A' (UP arrow)
-    // constexpr char KEY_DOWN = 66;  // code of 'B' (DOWN arrow)
-    // constexpr char KEY_LEFT = 67;  // code of 'A' (UP arrow)
-    // constexpr char KEY_RIGHT = 68; // code of 'B' (DOWN arrow)
-    constexpr char KEY_ENTER = 10; // code of 'Enter'
-    constexpr char KEY_ESC = 27;   // code of 'ESC'
-    constexpr char KEY_Q = 113;    // code of 'q'
-
     int x = 0;
     int y = 0;
     std::cout << "\033[2J";
@@ -75,42 +61,23 @@ void GameMap::modify_map() {
 	for (int i = 0; i < m_h; i++) {
 	    for (int j = 0; j < m_w; j++) {
 		if (i == x && j == y) {
-		    std::cout << "\033[42m" << map[x][y] << "\033[0m";
+		    char display_char = (map[i][j] == '#') ? 'X' : ' ';
+		    std::cout << "\033[42m" <<display_char << "\033[0m";
 		} else {
 		    std::cout << map[i][j];
 		}
 	    }
 	    std::cout << '\n';
 	}
-
-	char c = read_key();
-	std::cout << c << std::endl;
-	switch (c) {
-	    case KEY_ESC: 
-		{
-		    if (read_key() == '[') {
-			char next=read_key();
-			switch(next){
-			    case 'A' :
-				x = (x - 1 + m_w) % m_w;
-				break;
-			    case 'B':
-				(++x) %= m_w;
-				break;
-			    case 'C':
-				(++y) %= m_h;
-				break;
-			    case 'D':
-				y = (y - 1 + m_h) % m_h;
-				break;
-			}
-		    }
-		};break;
-	    case KEY_ENTER:
-		toggle(x, y);
-		break;
-	    case KEY_Q:
-		return;
+	Input::Action ac=Input::get_input();
+	switch(ac){
+	    case Input::Action::Up : x = (x - 1 + m_h) % m_h;break;
+	    case Input::Action::Down : x = (x + 1) % m_h;break;
+	    case Input::Action::Right : y = (y - 1 + m_w) % m_w;break;
+	    case Input::Action::Left : y = (y + 1) % m_w;break;
+	    case Input::Action::Accept: toggle(x,y);break;
+	    case Input::Action::Quit : return;
+	    default: break;
 	}
     }
 }
@@ -140,7 +107,7 @@ void GameMap::play() {
 	usleep(m_micro);
 	std::cout<<"\033[1;1H";
 	std::cout<<"Use m to modify the layout\n";
-	if (read_key() == 'm') {
+	if (Input::get_input()==Input::Action::Modify) {
 	    modify_map();
 	}
 	for (int i = 1; i < (m_h - 1); i++) {
